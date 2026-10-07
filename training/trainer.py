@@ -1,16 +1,19 @@
+import time
+import numpy as np
 import tensorflow as tf
-from training.curriculum import CurriculumScheduler
-from training.smart_benchmark import SmartReadinessBenchmark
 
 
-# ИСПРАВЛЕНИЕ: Увеличено число эпох (батчей) с 300 до 1500 для полноценной сходимости.
-def train_neural_oracle(model, channel, H, epochs=1500, batch_size=256):
+def train_neural_oracle(model, channel, H, epochs=15000, batch_size=256, lr_start=5e-4):
     _ = model(tf.zeros([1, channel.n], dtype=tf.float32))
 
-    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-3)
+    # 1. Косинусное затухание скорости обучения: от lr_start до 1% от lr_start
+    lr_schedule = tf.keras.optimizers.schedules.CosineDecay(
+        initial_learning_rate=lr_start,
+        decay_steps=epochs,
+        alpha=0.01  # Финальный lr = lr_start * 0.01
+    )
+    optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
     bce = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-    scheduler = CurriculumScheduler(epochs)
-    benchmark = SmartReadinessBenchmark(target_fer=0.02, patience=15)
 
     @tf.function
     def train_step(llr_tensor, y_true):
@@ -31,17 +34,49 @@ def train_neural_oracle(model, channel, H, epochs=1500, batch_size=256):
             optimizer.apply_gradients(grad_var_pairs)
         return loss
 
-    print("--- Старт глубокого обучения (Deep Training) ---")
-    for ep in range(1, epochs + 1):
-        snr = scheduler.get_snr(ep)
-        llr_batch, c_batch = channel.generate_llr(batch_size, ebno_db=snr, return_c=True)
+    print("=" * 65)
+    print(f"СТАРТ НОЧНОГО ОБУЧЕНИЯ (Overnight Run: {epochs} шагов, батч {batch_size})")
+    print(f"Скорость обучения: {lr_start:.1e} -> {lr_start * 0.01:.1e} (Cosine Annealing)")
+    print("=" * 65)
 
+    best_fer = 1.0
+    best_weights = None
+    start_time = time.time()
+
+    # Шаг логирования: каждые 500 шагов
+    log_interval = max(100, epochs // 30)
+
+    for ep in range(1, epochs + 1):
+        # Обучение на разнородном шуме от 2.0 до 6.0 дБ в каждом батче
+        llr_batch, c_batch = channel.generate_llr(batch_size, ebno_db=(2.0, 6.0), return_c=True)
         y_true_tensor = tf.constant(c_batch, dtype=tf.float32)
         llr_tensor = tf.constant(llr_batch, dtype=tf.float32)
 
         loss_val = train_step(llr_tensor, y_true_tensor)
 
-        if ep % 100 == 0:  # Проверяем каждые 100 батчей
-            print(f"Шаг {ep:4d}/{epochs} | SNR: {snr:.1f} dB | BCE Loss: {loss_val:.4f}")
-            if benchmark.is_trained_sufficiently(model, channel, eval_snr=4.5):
-                break
+        if ep % log_interval == 0 or ep == epochs:
+            # Валидация на контрольном SNR 4.5 dB (2000 блоков)
+            val_llr, val_c = channel.generate_llr(2000, ebno_db=4.5, return_c=True)
+            preds = model(tf.constant(val_llr))
+            bits = (preds[-1].numpy() < 0).astype(np.int8)
+            val_fer = float(np.mean(np.any(bits != val_c, axis=1)))
+            val_ber = float(np.mean(bits != val_c))
+
+            # Текущий LR
+            current_lr = lr_schedule(ep).numpy()
+            elapsed_min = (time.time() - start_time) / 60.0
+
+            # Чекпоинт лучших весов
+            is_best = ""
+            if val_fer < best_fer:
+                best_fer = val_fer
+                best_weights = model.get_weights()
+                is_best = " [*ЛУЧШИЙ ЧЕКПОИНТ*]"
+
+            print(
+                f"Шаг {ep:5d}/{epochs} [{elapsed_min:5.1f} мин] | LR: {current_lr:.1e} | Loss: {loss_val:.4f} | Val FER: {val_fer:.4f} (BER: {val_ber:.2e}){is_best}")
+
+    # Восстанавливаем лучшие веса, найденные за ночь
+    if best_weights is not None:
+        model.set_weights(best_weights)
+        print(f"\n[Завершено]: Загружены лучшие веса с Val FER = {best_fer:.4f}")
