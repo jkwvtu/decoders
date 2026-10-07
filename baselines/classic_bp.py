@@ -17,7 +17,6 @@ class ClassicMinSumBP:
 
         for _ in range(self.num_iter):
             msg_cv = np.zeros_like(msg_vc)
-            # Check node update
             for c in range(self.m):
                 v_nodes = np.where(self.H[c] == 1)[0]
                 for v in v_nodes:
@@ -26,7 +25,6 @@ class ClassicMinSumBP:
                     mins = np.min(np.abs(msg_vc[:, c, other_v]), axis=1)
                     msg_cv[:, c, v] = signs * mins * 0.8  # Нормализующий фактор Min-Sum
 
-            # Variable node update
             for v in range(self.n):
                 c_nodes = np.where(self.H[:, v] == 1)[0]
                 for c in c_nodes:

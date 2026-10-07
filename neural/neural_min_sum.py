@@ -22,12 +22,10 @@ class NeuralMinSum(tf.keras.Model):
         self.cn_idx = tf.constant(edges[:, 0], dtype=tf.int32)
         self.vn_idx = tf.constant(edges[:, 1], dtype=tf.int32)
 
-        # Стартуем с эталонного Normalized Min-Sum (w_cv = 0.8)
         self.w_cv = self.add_weight(shape=(self.num_edges,), initializer=tf.keras.initializers.Constant(0.8), trainable=True, name="w_cv")
         self.w_vc = self.add_weight(shape=(self.num_edges,), initializer="ones", trainable=True, name="w_vc")
         self.gamma = self.add_weight(shape=(self.num_vn,), initializer="ones", trainable=True, name="gamma")
 
-        # Прогрев графа
         dummy_input = tf.zeros([1, self.num_vn], dtype=tf.float32)
         _ = self(dummy_input)
 
@@ -48,7 +46,6 @@ class NeuralMinSum(tf.keras.Model):
         for _ in range(self.num_iter):
             msg_vc_w = msg_vc * w_vc_safe
 
-            # --- ЗНАКИ (Sign Processing) ---
             signs = tf.math.sign(msg_vc_w)
             signs = tf.where(tf.equal(signs, 0.0), tf.ones_like(signs), signs)
             signs_T = tf.transpose(signs)
@@ -56,20 +53,16 @@ class NeuralMinSum(tf.keras.Model):
             sign_ext_T = tf.gather(sign_prod, self.cn_idx, axis=0) * signs_T
             sign_ext = tf.transpose(sign_ext_T)
 
-            # --- АМПЛИТУДЫ (Strict Two-Minimums Logic) ---
             abs_val = tf.abs(msg_vc_w) + 1e-6
             abs_T = tf.transpose(abs_val)  # [edges, batch]
 
-            # Поиск первого минимума
             min1 = tf.math.unsorted_segment_min(abs_T, self.cn_idx, self.num_cn)  # [num_cn, batch]
             min1_edge = tf.gather(min1, self.cn_idx, axis=0)  # [edges, batch]
 
-            # Подсчет: сколько ребер достигли ровно первого минимума?
             is_min = tf.cast(tf.abs(abs_T - min1_edge) < 1e-5, tf.float32)
             count_min = tf.math.unsorted_segment_sum(is_min, self.cn_idx, self.num_cn)
             count_min_edge = tf.gather(count_min, self.cn_idx, axis=0)
 
-            # Маскируем для поиска второго минимума
             INF = tf.constant(1e4, dtype=tf.float32)
             abs_masked = tf.where(is_min > 0.5, INF, abs_T)
             min2 = tf.math.unsorted_segment_min(abs_masked, self.cn_idx, self.num_cn)
@@ -84,19 +77,15 @@ class NeuralMinSum(tf.keras.Model):
                 tf.where(is_min > 0.5, min2_edge, min1_edge)
             )
 
-            # Гарантия неотрицательности амплитуды
             ext_min_T = tf.maximum(ext_min_T, 1e-6)
             ext_min = tf.transpose(ext_min_T)
 
-            # Формирование Check-to-Variable сообщений
             msg_cv = sign_ext * ext_min * w_cv_safe
 
-            # --- ОБНОВЛЕНИЕ VARIABLE УЗЛОВ ---
             msg_cv_T = tf.transpose(msg_cv)
             sum_cv_T = tf.math.unsorted_segment_sum(msg_cv_T, self.vn_idx, self.num_vn)
             sum_cv = tf.transpose(sum_cv_T)
 
-            # КЛИППИНГ: Подавление паразитной рециркуляции на 4-циклах (стабильность градиента)
             total_llr = tf.clip_by_value(llr_scaled + sum_cv, -20.0, 20.0)
             msg_vc = tf.clip_by_value(tf.gather(total_llr, self.vn_idx, axis=1) - msg_cv, -20.0, 20.0)
 

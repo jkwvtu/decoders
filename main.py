@@ -23,9 +23,9 @@ from simulation.plot_results import plot_ber_fer_curves
 
 
 def main():
-    print("=" * 65)
-    print("ПОЛНЫЙ СРАВНИТЕЛЬНЫЙ АНАЛИЗ ДЕКОДЕРОВ БЧХ(63, 45)")
-    print("=" * 65)
+    print()
+    print("Полный сравнительный анализ Декодеров БЧХ(63, 45)")
+    print()
 
     bch = ExactBCH("bch_63_45")
     channel = CommunicationChannel(bch.n, bch.k, G=bch.G)
@@ -41,7 +41,6 @@ def main():
     ew_gnn_model = EW_GNN(bch.H, num_embed_dims=20, num_hidden_units=40, num_iter=8)
     nms_model = NeuralMinSum(bch.H, num_iter=8)
 
-    # ---------------- 3. ГЛУБОКОЕ НОЧНОЕ ОБУЧЕНИЕ ----------------
     t_start = time.time()
 
     # 1/2: EW-GNN обучается 15 000 шагов (основное время)
@@ -57,13 +56,12 @@ def main():
     # Живой Оракул оборачивает обученную NMS и OSD
     oracle_system = LiveNeuralOracle(bch.H, neural_model=nms_model, fallback_decoder=osd_decoder)
 
-    # ---------------- 4. Симуляция Монте-Карло ----------------
     snr_grid = np.arange(2.0, 6.5, 0.75)
     target_frame_errors = 40
 
-    print("=" * 65)
-    print(f"СТАРТ СИМУЛЯЦИИ МОНТЕ-КАРЛО (Сетка SNR: {snr_grid} дБ)")
-    print("=" * 65)
+    print()
+    print(f"Старт симуляции Монте-Карло (Сетка SNR: {snr_grid} дБ)")
+    print()
 
     print("\n[1/6] Симуляция: Berlekamp-Massey (Hard Decision)...")
     ber_bm, fer_bm = run_monte_carlo(bm_decoder.decode, channel, snr_grid, target_fer=target_frame_errors)
@@ -94,7 +92,6 @@ def main():
     print("\n[6/6] Симуляция: OSD-1 (Maximum Likelihood Bound)...")
     ber_osd, fer_osd = run_monte_carlo(osd_decoder.decode, channel, snr_grid, target_fer=target_frame_errors)
 
-    # ---------------- 5. Построение графиков ----------------
     ber_results = {
         'Berlekamp-Massey (Hard)': ber_bm,
         'Classic Min-Sum (20 it)': ber_bp,

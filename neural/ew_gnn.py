@@ -16,7 +16,6 @@ class UpdateEmbeddings(Layer):
         self._gather_ind = gather_ind
         self._num_nodes = num_nodes
 
-        # use_bias=False обеспечивает строгую нечетную симметрию относительно знака LLR
         self._msg_mlp = Sequential([
             Dense(num_hidden_units, activation="tanh", use_bias=False),
             Dense(num_msg_dims, use_bias=False)
@@ -35,7 +34,6 @@ class UpdateEmbeddings(Layer):
         messages = self._msg_mlp(features)
         messages_T = tf.transpose(messages, (1, 0, 2))
 
-        # ИСПРАВЛЕНИЕ NVIDIA: СУММА вместо среднего (не делит на степень узла 28)
         m = tf.math.unsorted_segment_sum(messages_T, self._gather_ind, self._num_nodes)
         m = tf.transpose(m, (1, 0, 2))
 
@@ -57,7 +55,6 @@ class EW_GNN(tf.keras.Model):
         self.cn_gather = tf.constant(edges[:, 0], dtype=tf.int32)
         self.vn_gather = tf.constant(edges[:, 1], dtype=tf.int32)
 
-        # Стандартная инициализация Glorot Uniform для свободного потока градиентов
         self.llr_to_embed = Dense(num_embed_dims, use_bias=False)
         self.embed_to_llr = Dense(1, use_bias=False)
 
@@ -72,7 +69,6 @@ class EW_GNN(tf.keras.Model):
     @tf.function
     def call(self, llr):
         batch_size = tf.shape(llr)[0]
-        # Клиппинг LLR по канону NVIDIA
         llr_clipped = tf.clip_by_value(llr, -20.0, 20.0)
 
         h_vn = self.llr_to_embed(tf.expand_dims(llr_clipped, -1))
@@ -83,7 +79,6 @@ class EW_GNN(tf.keras.Model):
             h_cn = self.update_cn(h_vn, h_cn)
             h_vn = self.update_vn(h_cn, h_vn)
 
-            # Прямое предсказание LLR через проектор
             llr_out = tf.squeeze(self.embed_to_llr(h_vn), axis=-1)
             all_iters.append(llr_out)
 

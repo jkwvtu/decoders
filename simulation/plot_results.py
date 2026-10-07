@@ -11,7 +11,6 @@ def plot_ber_fer_curves(snr_grid, ber_dict, fer_dict, title_prefix="BCH(63,45)",
     """
     fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 
-    # Настройки стилей кривых (цвета, маркеры, типы линий)
     styles = {
         'Berlekamp-Massey (Hard)': {'color': '#333333', 'marker': 'o', 'linestyle': '--', 'linewidth': 1.5},
         'Classic Min-Sum (20 it)': {'color': '#2ca02c', 'marker': 's', 'linestyle': '-.', 'linewidth': 1.5},
@@ -21,10 +20,8 @@ def plot_ber_fer_curves(snr_grid, ber_dict, fer_dict, title_prefix="BCH(63,45)",
         'OSD-1 (ML Bound)': {'color': '#d62728', 'marker': 'v', 'linestyle': ':', 'linewidth': 2.0}
     }
 
-    # Дефолтный стиль для методов, которых нет в словаре styles
     default_style = {'marker': 'x', 'linestyle': '-', 'linewidth': 1.5}
 
-    # ------------------ 1. График BER (Битовая ошибка) ------------------
     ax_ber = axes[0]
     for label, ber_vals in ber_dict.items():
         st = styles.get(label, default_style)
@@ -37,7 +34,6 @@ def plot_ber_fer_curves(snr_grid, ber_dict, fer_dict, title_prefix="BCH(63,45)",
     ax_ber.set_ylim([1e-5, 1.0])
     ax_ber.legend(fontsize=10, loc='lower left')
 
-    # ------------------ 2. График FER (Блочная ошибка / BLER) ------------------
     ax_fer = axes[1]
     for label, fer_vals in fer_dict.items():
         st = styles.get(label, default_style)

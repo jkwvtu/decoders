@@ -34,10 +34,10 @@ def train_neural_oracle(model, channel, H, epochs=15000, batch_size=256, lr_star
             optimizer.apply_gradients(grad_var_pairs)
         return loss
 
-    print("=" * 65)
-    print(f"СТАРТ НОЧНОГО ОБУЧЕНИЯ (Overnight Run: {epochs} шагов, батч {batch_size})")
+    print()
+    print(f"Старт обучения (Run: {epochs} шагов, батч {batch_size})")
     print(f"Скорость обучения: {lr_start:.1e} -> {lr_start * 0.01:.1e} (Cosine Annealing)")
-    print("=" * 65)
+    print()
 
     best_fer = 1.0
     best_weights = None
@@ -76,7 +76,7 @@ def train_neural_oracle(model, channel, H, epochs=15000, batch_size=256, lr_star
             print(
                 f"Шаг {ep:5d}/{epochs} [{elapsed_min:5.1f} мин] | LR: {current_lr:.1e} | Loss: {loss_val:.4f} | Val FER: {val_fer:.4f} (BER: {val_ber:.2e}){is_best}")
 
-    # Восстанавливаем лучшие веса, найденные за ночь
+    # Восстанавливаем лучшие веса
     if best_weights is not None:
         model.set_weights(best_weights)
         print(f"\n[Завершено]: Загружены лучшие веса с Val FER = {best_fer:.4f}")

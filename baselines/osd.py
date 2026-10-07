@@ -21,13 +21,11 @@ class OSDDecoder:
                     pivot = r
                     break
 
-            # Если столбец линейно зависим, ищем замену среди менее надежных бит (col >= k)
             if pivot == -1:
                 found_swap = False
                 for swap_col in range(self.k, self.n):
                     for r in range(row, self.k):
                         if M[r, swap_col] == 1:
-                            # Меняем столбцы местами
                             M[:, [col, swap_col]] = M[:, [swap_col, col]]
                             cols_order[[col, swap_col]] = cols_order[[swap_col, col]]
                             pivot = r
@@ -36,7 +34,6 @@ class OSDDecoder:
                     if found_swap: break
 
                 if not found_swap:
-                    # Матрица G неполного ранга (невозможно для корректного БЧХ)
                     break
 
             # Стандартный шаг Гаусса

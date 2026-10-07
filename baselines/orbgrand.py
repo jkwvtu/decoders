@@ -17,12 +17,11 @@ class ORBGRANDDecoder:
 
         for b in range(batch_size):
             y = llr_batch[b]
-            # Проверка исходного синдрома
             syn = np.dot(self.H, r[b]) % 2
             if not np.any(syn):
                 continue
 
-            order = np.argsort(np.abs(y))  # от наименее надежных к наиболее надежным
+            order = np.argsort(np.abs(y))
             found = False
 
             # Перебор 1-битовых и 2-битовых гипотез шума

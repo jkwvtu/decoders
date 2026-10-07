@@ -22,11 +22,9 @@ class ExactBCH:
         else:
             raise ValueError(f"Неизвестный тип кода: {code_type}")
 
-        # 1. Точный расчет порождающего полинома g(x)
         self.g = self._find_generator_poly()
         self.k = self.n - (len(self.g) - 1)
 
-        # 2. Построение систематических матриц G и H
         self.G, self.H = self._build_systematic_matrices()
 
     def _find_generator_poly(self):
@@ -38,15 +36,13 @@ class ExactBCH:
                 roots.add(val)
                 val = (val * 2) % (self.gf.order - 1)
 
-        # Перемножаем двучлены (x - alpha^r) в поле GF(2^m)
         g_poly = [1]
         for r in roots:
             root_val = self.gf.exp_table[r]
-            # Умножение текущего g_poly на (x + alpha^r)
             new_g = [0] * (len(g_poly) + 1)
             for j in range(len(g_poly)):
-                new_g[j] = self.gf.add(new_g[j], g_poly[j])  # Сдвиг (умножение на x)
-                new_g[j + 1] = self.gf.add(new_g[j + 1], self.gf.mul(g_poly[j], root_val))  # На alpha^r
+                new_g[j] = self.gf.add(new_g[j], g_poly[j])
+                new_g[j + 1] = self.gf.add(new_g[j + 1], self.gf.mul(g_poly[j], root_val))
             g_poly = new_g
 
         return np.array(g_poly, dtype=np.int8)
@@ -80,6 +76,6 @@ class ExactBCH:
         H_sys = np.hstack((P.T, np.eye(self.n - k, dtype=np.int8)))
 
         is_orthogonal = np.all(np.dot(G_sys.astype(int), H_sys.T.astype(int)) % 2 == 0)
-        assert is_orthogonal, "КРИТИЧЕСКАЯ ОШИБКА: G и H не ортогональны!"
+        assert is_orthogonal, "Критическая ошибка: G и H не ортогональны!"
 
         return G_sys, H_sys

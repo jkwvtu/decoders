@@ -70,7 +70,6 @@ class BerlekampMasseyDecoder:
             # 3. Поиск Ченя (Коррекция локатора корня)
             error_locations = []
             for i in range(self.n):
-                # Корень локатора для позиции i равен alpha^{-(n - 1 - i)}
                 root_power = (self.n - 1 - i) % (self.gf.order - 1)
                 inv_root_power = (self.gf.order - 1 - root_power) % (self.gf.order - 1)
                 inv_alpha_i = self.gf.exp_table[inv_root_power]

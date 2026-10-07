@@ -8,8 +8,6 @@ def run_monte_carlo(decoder_fn, channel, snr_range, target_fer=20, max_batches=5
         bit_errors, frame_errors = 0, 0
         total_bits, total_frames = 0, 0
 
-        # ИСПРАВЛЕНИЕ: На высоких SNR (>=5.0) увеличиваем лимит симуляции в 4 раза (до 51200 блоков),
-        # чтобы попытаться найти редчайшие ошибки ML-декодера (OSD).
         current_max_batches = max_batches if snr < 4.8 else max_batches * 4
 
         for b_idx in range(1, current_max_batches + 1):

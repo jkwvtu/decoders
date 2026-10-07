@@ -15,7 +15,6 @@ class CommunicationChannel:
         return 1.0 / (2.0 * self.coderate * ebno_lin)
 
     def generate_llr(self, batch_size, ebno_db, return_c=False):
-        # Если передан кортеж (min_snr, max_snr), генерируем вектор разных SNR для батча
         if isinstance(ebno_db, (tuple, list)):
             snr_vals = np.random.uniform(ebno_db[0], ebno_db[1], size=(batch_size, 1)).astype(np.float32)
         else:

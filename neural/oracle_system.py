@@ -40,7 +40,6 @@ class LiveNeuralOracle:
             return decoded
 
         # 2. Активация Оракула (ИСПРАВЛЕНИЕ RETRACING)
-        # Прогоняем весь фиксированный батч для гарантии статического shape в @tf.function
         self.stats["oracle_invoked"] += len(err_indices)
 
         full_llrs = tf.constant(llr_batch, dtype=tf.float32)
@@ -70,7 +69,7 @@ class LiveNeuralOracle:
     def print_diagnostics(self):
         tot = max(1, self.stats["total"])
         inv = max(1, self.stats["oracle_invoked"])
-        print("\n--- ДИАГНОСТИКА ЖИВОГО ОРАКУЛА ---")
+        print("\nДиагностика живого Оракула")
         print(f"Всего блоков:                {self.stats['total']}")
         print(
             f"Fast-Path (без нейросети):   {self.stats['fast_cleared']} ({self.stats['fast_cleared'] / tot * 100:.1f}%)")

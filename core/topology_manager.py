@@ -36,7 +36,6 @@ class TopologyManager:
             candidate_H = np.copy(best_H)
             candidate_H[r1] = candidate_row
 
-            # Проверяем, что матрица сохраняет полный ранг
             if np.linalg.matrix_rank(candidate_H.astype(float)) == m:
                 cycles = TopologyManager.count_4_cycles(candidate_H)
                 if cycles < best_cycles:
